@@ -60,9 +60,8 @@ def generate_question_and_answer(diff):
         base_url=api_base
     )
     
-    prompt = f"""Analyze this git diff and generate ONE technical question that tests the author's understanding of their changes.
+    prompt = f"""Analyze this git diff:
 
-Diff:
 {diff}
 
 Follow the instructions in the system prompt carefully."""
