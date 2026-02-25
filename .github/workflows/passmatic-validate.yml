@@ -33,7 +33,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Check if the comment is on a PR (not a regular issue)
           PR_URL=$(gh api repos/$GITHUB_REPOSITORY/issues/${{ github.event.issue.number }} --jq '.pull_request.url')
           
           if [ "$PR_URL" = "null" ]; then
@@ -64,8 +63,37 @@ jobs:
           echo "comment_body=$COMMENT_BODY" >> $GITHUB_OUTPUT
           echo "comment_body=$(echo "$COMMENT_BODY" | jq -Rs .)" >> $GITHUB_OUTPUT
       
-      - name: Verify comment author is PR author
+      - name: Check if user is collaborator
         if: steps.check_pr.outputs.is_pr == 'true'
+        id: check_auth
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_AUTHOR="${{ steps.pr_info.outputs.pr_author }}"
+          REPO="${{ github.repository }}"
+          
+          # Get list of collaborators
+          COLLABORATORS=$(gh api repos/$REPO/collaborators --jq '.[].login')
+          
+          # Check if PR author is in the collaborator list
+          if echo "$COLLABORATORS" | grep -q "^${PR_AUTHOR}$"; then
+            echo "✅ User is a collaborator"
+            echo "is_authorized=true" >> $GITHUB_OUTPUT
+          else
+            echo "⛔ User is not a collaborator"
+            echo "is_authorized=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Skip for non-collaborators
+        if: steps.check_pr.outputs.is_pr == 'true' && steps.check_auth.outputs.is_authorized != 'true'
+        run: |
+          echo "⏭️  Skipping Passmatic validation - User is not a collaborator"
+          echo "✅ Workflow completed (no Passmatic validation required)"
+      
+      - name: Verify comment author is PR author
+        if: |
+          steps.check_pr.outputs.is_pr == 'true' &&
+          steps.check_auth.outputs.is_authorized == 'true'
         id: check_author
         env:
           GH_TOKEN: ${{ github.token }}
@@ -82,7 +110,10 @@ jobs:
           echo "is_author=true" >> $GITHUB_OUTPUT
       
       - name: Check if already verified
-        if: steps.check_pr.outputs.is_pr == 'true' && steps.check_author.outputs.is_author == 'true'
+        if: |
+          steps.check_pr.outputs.is_pr == 'true' &&
+          steps.check_auth.outputs.is_authorized == 'true' &&
+          steps.check_author.outputs.is_author == 'true'
         id: check_verified
         env:
           GH_TOKEN: ${{ github.token }}
@@ -99,7 +130,10 @@ jobs:
           fi
       
       - name: Check if answer command
-        if: steps.check_pr.outputs.is_pr == 'true' && steps.check_author.outputs.is_author == 'true'
+        if: |
+          steps.check_pr.outputs.is_pr == 'true' &&
+          steps.check_auth.outputs.is_authorized == 'true' &&
+          steps.check_author.outputs.is_author == 'true'
         id: check_command
         run: |
           COMMENT_BODY="${{ steps.pr_info.outputs.comment_body }}"
@@ -115,6 +149,7 @@ jobs:
       - name: Validate answer
         if: |
           steps.check_pr.outputs.is_pr == 'true' &&
+          steps.check_auth.outputs.is_authorized == 'true' &&
           steps.check_author.outputs.is_author == 'true' &&
           steps.check_command.outputs.is_answer == 'true'
         env:
@@ -135,6 +170,8 @@ jobs:
         run: |
           if [ "${{ steps.check_pr.outputs.is_pr }}" == "false" ]; then
             echo "⏭️  Passmatic: Not a PR comment"
+          elif [ "${{ steps.check_auth.outputs.is_authorized }}" == "false" ]; then
+            echo "⏭️  Passmatic: User is not a collaborator"
           elif [ "${{ steps.check_author.outputs.is_author }}" == "false" ]; then
             echo "⏭️  Passmatic: Not from PR author"
           elif [ "${{ steps.check_command.outputs.is_answer }}" == "false" ]; then

@@ -41,7 +41,42 @@ jobs:
           echo "pr_author=${{ github.event.pull_request.user.login }}" >> $GITHUB_OUTPUT
           echo "pr_title=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
       
+      - name: Check if user is collaborator
+        id: check_auth
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_AUTHOR="${{ steps.pr_info.outputs.pr_author }}"
+          REPO="${{ github.repository }}"
+          
+          echo "PR Author: $PR_AUTHOR"
+          echo "Repository: $REPO"
+          
+          # Get list of collaborators
+          COLLABORATORS=$(gh api repos/$REPO/collaborators --jq '.[].login')
+          
+          echo "Collaborators: $COLLABORATORS"
+          
+          # Check if PR author is in the collaborator list
+          if echo "$COLLABORATORS" | grep -q "^${PR_AUTHOR}$"; then
+            echo "✅ User is a collaborator"
+            echo "is_authorized=true" >> $GITHUB_OUTPUT
+          else
+            echo "⛔ User is not a collaborator"
+            echo "is_authorized=false" >> $GITHUB_OUTPUT
+            
+            # Post comment explaining restriction
+            gh pr comment ${{ steps.pr_info.outputs.pr_number }} --body "Passmatic is only enabled for repository collaborators. Current author: @${PR_AUTHOR}. Please contact the maintainer."
+          fi
+      
+      - name: Skip Passmatic for non-collaborators
+        if: steps.check_auth.outputs.is_authorized != 'true'
+        run: |
+          echo "⏭️  Skipping Passmatic - User is not a collaborator"
+          echo "✅ Workflow completed (no Passmatic check required)"
+      
       - name: Check if already verified
+        if: steps.check_auth.outputs.is_authorized == 'true'
         id: check_verified
         env:
           GH_TOKEN: ${{ github.token }}
@@ -57,7 +92,7 @@ jobs:
           fi
       
       - name: Generate question and post vibe check
-        if: steps.check_verified.outputs.already_verified != 'true'
+        if: steps.check_auth.outputs.is_authorized == 'true' && steps.check_verified.outputs.already_verified != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ steps.pr_info.outputs.pr_number }}
@@ -68,7 +103,7 @@ jobs:
         timeout-minutes: 5
       
       - name: Mark as pending
-        if: steps.check_verified.outputs.already_verified != 'true'
+        if: steps.check_auth.outputs.is_authorized == 'true' && steps.check_verified.outputs.already_verified != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ steps.pr_info.outputs.pr_number }}
@@ -78,7 +113,9 @@ jobs:
       - name: Summary
         if: always()
         run: |
-          if [ "${{ steps.check_verified.outputs.already_verified }}" == "true" ]; then
+          if [ "${{ steps.check_auth.outputs.is_authorized }}" == "false" ]; then
+            echo "⛔ Passmatic: User is not a collaborator"
+          elif [ "${{ steps.check_verified.outputs.already_verified }}" == "true" ]; then
             echo "✅ Passmatic: PR already verified"
           else
             echo "🔍 Passmatic: Vibe check initiated"
