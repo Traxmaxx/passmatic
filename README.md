@@ -45,6 +45,7 @@ Go to your repository Settings → Secrets and variables → Actions and add:
 ```
 OPENAI_API_KEY=your_api_key_here
 OPENAI_API_BASE=https://api.z.ai/api/coding/paas/v4
+OPENAI_MODEL=glm-4.7
 ```
 
 ### 2. Copy Files
@@ -134,12 +135,13 @@ Required secrets:
 |----------|-------------|
 | `OPENAI_API_KEY` | Your LLM API key |
 | `OPENAI_API_BASE` | LLM API endpoint (default: z.ai) |
+| `OPENAI_MODEL` | LLM model to use (default: glm-4.7) |
 
 **No additional configuration needed!** Passmatic automatically checks if PR author is a repository collaborator.
 
 ## LLM Provider
 
-Passmatic uses **z.ai GLM-5** as the default LLM provider via the Coding API endpoint. The integration is OpenAI-compatible, so you can easily switch to other providers by changing the `OPENAI_API_BASE` secret.
+Passmatic uses **z.ai GLM-4.7** as the default LLM provider via the Coding API endpoint. The integration is OpenAI-compatible, so you can easily switch to other providers or models by changing the `OPENAI_API_BASE` and `OPENAI_MODEL` secrets.
 
 ## Workflow Permissions
 
@@ -207,8 +209,8 @@ subprocess.run(['gh', 'pr', 'diff', pr_number], capture_output=True)
 ### LLM Integration
 
 Uses OpenAI-compatible client with:
-- Model: `glm-5`
-- Base URL: `https://api.z.ai/api/coding/paas/v4`
+- Model: Configurable via `OPENAI_MODEL` secret (default: glm-4.7)
+- Base URL: Configurable via `OPENAI_API_BASE` secret
 - Response format: JSON object with 3 questions
 - Temperature: 0.7 for question generation, 0.3 for validation
 

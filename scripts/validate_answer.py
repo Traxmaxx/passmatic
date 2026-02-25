@@ -73,6 +73,7 @@ def validate_answer_with_llm(question, correct_answer, user_answer):
         raise ValueError("OPENAI_API_KEY environment variable not set")
     
     api_base = os.environ.get('OPENAI_API_BASE', 'https://api.z.ai/api/coding/paas/v4')
+    model = os.environ.get('OPENAI_MODEL', 'glm-4.7')
     
     client = OpenAI(
         api_key=api_key,
@@ -80,18 +81,18 @@ def validate_answer_with_llm(question, correct_answer, user_answer):
     )
     
     prompt = f"""You are a strict technical reviewer. Evaluate if the user's answer demonstrates correct understanding of the code changes.
-
+    
 Question: {question}
-
+    
 Expected Answer (reference): {correct_answer}
-
+    
 User's Answer: {user_answer}
-
+    
 Evaluate based on:
 1. Technical accuracy of the explanation
 2. Understanding of the core concepts
 3. Relevance to the question asked
-
+    
 Respond with JSON in this exact format:
 {{
     "passed": true/false,
@@ -100,7 +101,7 @@ Respond with JSON in this exact format:
     
     try:
         response = client.chat.completions.create(
-            model="glm-5",
+            model=model,
             messages=[
                 {"role": "system", "content": "You are a fair but strict technical reviewer."},
                 {"role": "user", "content": prompt}

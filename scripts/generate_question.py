@@ -51,6 +51,7 @@ def generate_question_and_answer(diff):
         raise ValueError("OPENAI_API_KEY environment variable not set")
     
     api_base = os.environ.get('OPENAI_API_BASE', 'https://api.z.ai/api/coding/paas/v4')
+    model = os.environ.get('OPENAI_MODEL', 'glm-4.7')
     
     system_prompt = load_system_prompt()
     
@@ -68,7 +69,7 @@ Follow the instructions in the system prompt carefully."""
     
     try:
         response = client.chat.completions.create(
-            model="glm-5",
+            model=model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}

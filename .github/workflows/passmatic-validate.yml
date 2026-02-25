@@ -161,6 +161,7 @@ jobs:
           COMMENT_AUTHOR: ${{ steps.pr_info.outputs.comment_author }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_BASE: ${{ secrets.OPENAI_API_BASE }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
         run: |
           python scripts/validate_answer.py
         timeout-minutes: 5
