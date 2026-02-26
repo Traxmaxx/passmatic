@@ -111,6 +111,52 @@ jobs:
           python scripts/generate_question.py
         timeout-minutes: 5
       
+      - name: Check for existing answer
+        if: |
+          steps.check_auth.outputs.is_authorized == 'true' &&
+          steps.check_verified.outputs.already_verified != 'true' &&
+          steps.check_verified.outputs.has_questions == 'true'
+        id: check_answer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.pr_info.outputs.pr_number }}
+          PR_AUTHOR: ${{ steps.pr_info.outputs.pr_author }}
+        run: |
+          COMMENTS=$(gh api repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments --jq '.[] | select(.user.login == env.PR_AUTHOR) | select(.body | startswith("!answer")) | {id: .id, body: .body}')
+          
+          if [ -n "$COMMENTS" ]; then
+            LATEST_ANSWER=$(echo "$COMMENTS" | jq -s 'last')
+            COMMENT_ID=$(echo "$LATEST_ANSWER" | jq -r '.id')
+            COMMENT_BODY=$(echo "$LATEST_ANSWER" | jq -r '.body')
+            
+            echo "has_answer=true" >> $GITHUB_OUTPUT
+            echo "comment_id=$COMMENT_ID" >> $GITHUB_OUTPUT
+            echo "comment_body=$(echo "$COMMENT_BODY" | jq -Rs .)" >> $GITHUB_OUTPUT
+            echo "🔍 Found existing answer, will re-validate"
+          else
+            echo "has_answer=false" >> $GITHUB_OUTPUT
+            echo "⏭️  No answer found yet"
+          fi
+      
+      - name: Re-validate existing answer
+        if: |
+          steps.check_auth.outputs.is_authorized == 'true' &&
+          steps.check_verified.outputs.has_questions == 'true' &&
+          steps.check_answer.outputs.has_answer == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.pr_info.outputs.pr_number }}
+          COMMENT_BODY: ${{ steps.check_answer.outputs.comment_body }}
+          COMMENT_ID: ${{ steps.check_answer.outputs.comment_id }}
+          PR_AUTHOR: ${{ steps.pr_info.outputs.pr_author }}
+          COMMENT_AUTHOR: ${{ steps.pr_info.outputs.pr_author }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_BASE: ${{ secrets.OPENAI_API_BASE }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+        run: |
+          python scripts/validate_answer.py
+        timeout-minutes: 5
+      
       - name: Mark as pending
         if: |
           steps.check_auth.outputs.is_authorized == 'true' &&
@@ -129,6 +175,8 @@ jobs:
             echo "⛔ Passmatic: User is not a collaborator"
           elif [ "${{ steps.check_verified.outputs.already_verified }}" == "true" ]; then
             echo "✅ Passmatic: PR already verified"
+          elif [ "${{ steps.check_answer.outputs.has_answer }}" == "true" ]; then
+            echo "🔍 Passmatic: Re-validating existing answer"
           elif [ "${{ steps.check_verified.outputs.has_questions }}" == "true" ]; then
             echo "⏭️  Passmatic: Questions already exist, waiting for answers"
           else
