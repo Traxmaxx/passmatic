@@ -75,7 +75,7 @@ jobs:
           echo "⏭️  Skipping Passmatic - User is not a collaborator"
           echo "✅ Workflow completed (no Passmatic check required)"
       
-      - name: Check if already verified
+      - name: Check if already verified or has questions
         if: steps.check_auth.outputs.is_authorized == 'true'
         id: check_verified
         env:
@@ -87,12 +87,20 @@ jobs:
           if echo "$COMMENTS" | grep -q "✅ Passmatic: Vibe Check Passed"; then
             echo "already_verified=true" >> $GITHUB_OUTPUT
             echo "⏭️  PR already verified, skipping vibe check"
+          elif echo "$COMMENTS" | grep -q "Passmatic: Vibe Check Required"; then
+            echo "already_verified=false" >> $GITHUB_OUTPUT
+            echo "has_questions=true" >> $GITHUB_OUTPUT
+            echo "⏭️  Questions already posted, skipping question generation"
           else
             echo "already_verified=false" >> $GITHUB_OUTPUT
+            echo "has_questions=false" >> $GITHUB_OUTPUT
           fi
       
       - name: Generate question and post vibe check
-        if: steps.check_auth.outputs.is_authorized == 'true' && steps.check_verified.outputs.already_verified != 'true'
+        if: |
+          steps.check_auth.outputs.is_authorized == 'true' &&
+          steps.check_verified.outputs.already_verified != 'true' &&
+          steps.check_verified.outputs.has_questions != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ steps.pr_info.outputs.pr_number }}
@@ -104,7 +112,10 @@ jobs:
         timeout-minutes: 5
       
       - name: Mark as pending
-        if: steps.check_auth.outputs.is_authorized == 'true' && steps.check_verified.outputs.already_verified != 'true'
+        if: |
+          steps.check_auth.outputs.is_authorized == 'true' &&
+          steps.check_verified.outputs.already_verified != 'true' &&
+          steps.check_verified.outputs.has_questions != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ steps.pr_info.outputs.pr_number }}
@@ -118,6 +129,8 @@ jobs:
             echo "⛔ Passmatic: User is not a collaborator"
           elif [ "${{ steps.check_verified.outputs.already_verified }}" == "true" ]; then
             echo "✅ Passmatic: PR already verified"
+          elif [ "${{ steps.check_verified.outputs.has_questions }}" == "true" ]; then
+            echo "⏭️  Passmatic: Questions already exist, waiting for answers"
           else
             echo "🔍 Passmatic: Vibe check initiated"
           fi
