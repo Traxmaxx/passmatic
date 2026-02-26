@@ -135,7 +135,7 @@ jobs:
           if [ -n "$COMMENTS" ]; then
             LATEST_ANSWER=$(echo "$COMMENTS" | jq -s 'last')
             COMMENT_ID=$(echo "$LATEST_ANSWER" | jq -r '.id')
-            COMMENT_BODY=$(echo "$LATEST_ANSWER" | jq -r '.body')
+            COMMENT_BODY=$(echo "$LATEST_ANSWER" | jq -r '.body' | jq -Rs .)
             
             echo "has_answer=true" >> $GITHUB_OUTPUT
             echo "comment_id=$COMMENT_ID" >> $GITHUB_OUTPUT
