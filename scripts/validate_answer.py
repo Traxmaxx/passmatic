@@ -207,6 +207,10 @@ def main():
         # Parse inputs from environment
         pr_number = os.environ.get('PR_NUMBER')
         comment_body = os.environ.get('COMMENT_BODY', '')
+        # JSON-decode if it's a JSON string (double-encoded from workflow)
+        if comment_body.startswith('"') and comment_body.endswith('"'):
+            import json
+            comment_body = json.loads(comment_body)
         comment_id = os.environ.get('COMMENT_ID')
         pr_author = os.environ.get('PR_AUTHOR')
         comment_author = os.environ.get('COMMENT_AUTHOR')
