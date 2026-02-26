@@ -155,6 +155,7 @@ jobs:
           steps.check_command.outputs.is_answer == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ steps.pr_info.outputs.pr_number }}
           COMMENT_BODY: ${{ steps.pr_info.outputs.comment_body }}
           COMMENT_ID: ${{ steps.pr_info.outputs.comment_id }}

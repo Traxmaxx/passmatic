@@ -8,8 +8,9 @@ from openai import OpenAI
 def get_pr_comments(pr_number):
     """Fetch all comments for a PR using gh CLI."""
     try:
+        repo = os.environ.get('GITHUB_REPOSITORY')
         result = subprocess.run(
-            ['gh', 'api', f'repos/owner/repo/pulls/{pr_number}/comments'],
+            ['gh', 'api', f'repos/{repo}/pulls/{pr_number}/comments'],
             capture_output=True,
             text=True,
             timeout=30
@@ -28,8 +29,9 @@ def get_pr_comments(pr_number):
 def get_pr_issue_comments(pr_number):
     """Fetch all issue comments (regular comments) for a PR using gh CLI."""
     try:
+        repo = os.environ.get('GITHUB_REPOSITORY')
         result = subprocess.run(
-            ['gh', 'api', f'repos/owner/repo/issues/{pr_number}/comments'],
+            ['gh', 'api', f'repos/{repo}/issues/{pr_number}/comments'],
             capture_output=True,
             text=True,
             timeout=30
