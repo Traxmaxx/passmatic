@@ -60,7 +60,9 @@ jobs:
           echo "pr_author=$PR_AUTHOR" >> $GITHUB_OUTPUT
           echo "comment_id=$COMMENT_ID" >> $GITHUB_OUTPUT
           echo "comment_author=$COMMENT_AUTHOR" >> $GITHUB_OUTPUT
-          echo "comment_body=$COMMENT_BODY" >> $GITHUB_OUTPUT
+          echo "comment_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMENT_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
       
       - name: Check if user is collaborator
         if: steps.check_pr.outputs.is_pr == 'true'

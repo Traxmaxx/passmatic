@@ -131,7 +131,9 @@ jobs:
             
             echo "has_answer=true" >> $GITHUB_OUTPUT
             echo "comment_id=$COMMENT_ID" >> $GITHUB_OUTPUT
-            echo "comment_body=$(echo "$COMMENT_BODY" | jq -Rs .)" >> $GITHUB_OUTPUT
+            echo "comment_body<<EOF" >> $GITHUB_OUTPUT
+            echo "$COMMENT_BODY" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
             echo "🔍 Found existing answer, will re-validate"
           else
             echo "has_answer=false" >> $GITHUB_OUTPUT
