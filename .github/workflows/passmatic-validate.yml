@@ -59,7 +59,7 @@ jobs:
         run: |
           PR_NUM=${{ github.event.issue.number }}
           PR_DATA=$(gh api repos/$GITHUB_REPOSITORY/pulls/$PR_NUM)
-          COMMENT_BODY="${{ github.event.comment.body }}"
+          COMMENT_BODY=$(echo "${{ github.event.comment.body }}" | jq -Rs .)
           COMMENT_ID=${{ github.event.comment.id }}
           COMMENT_AUTHOR=${{ github.event.comment.user.login }}
           PR_AUTHOR=$(echo "$PR_DATA" | jq -r '.user.login')
@@ -68,9 +68,7 @@ jobs:
           echo "pr_author=$PR_AUTHOR" >> $GITHUB_OUTPUT
           echo "comment_id=$COMMENT_ID" >> $GITHUB_OUTPUT
           echo "comment_author=$COMMENT_AUTHOR" >> $GITHUB_OUTPUT
-          echo "comment_body<<'EOF'" >> $GITHUB_OUTPUT
-          echo "$COMMENT_BODY" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "comment_body=$COMMENT_BODY" >> $GITHUB_OUTPUT
       
       - name: Check if user is collaborator
         if: steps.check_pr.outputs.is_pr == 'true'
@@ -145,8 +143,9 @@ jobs:
           steps.check_author.outputs.is_author == 'true'
         id: check_command
         run: |
-          COMMENT_BODY="${{ steps.pr_info.outputs.comment_body }}"
-          
+          # Decode JSON and strip carriage returns
+          COMMENT_BODY=$(printf '%s' '${{ steps.pr_info.outputs.comment_body }}' | jq -r . | tr -d '\r')
+
           if echo "$COMMENT_BODY" | grep -q "^!answer"; then
             echo "is_answer=true" >> $GITHUB_OUTPUT
           else
