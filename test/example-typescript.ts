@@ -161,3 +161,15 @@ const updatedUser = {
 };
 
 console.log("Updated user:", updatedUser);
+
+// Type guard function
+function isAdmin(user: User): user is User & { roles: [string, ...string[]] } {
+  return user.roles.includes("admin");
+}
+
+// Utility function to filter admin users
+function getAdminUsers(users: User[]): User[] {
+  return users.filter(isAdmin);
+}
+
+console.log("Admin users:", getAdminUsers(users));
